@@ -21,6 +21,7 @@ use crate::test_support::PathBufExt;
 use crate::test_support::test_path_display;
 use crate::tui::FrameRequester;
 use assert_matches::assert_matches;
+use codex_app_server_protocol::AdditionalFileSystemPermissions;
 use codex_app_server_protocol::AppSummary;
 use codex_app_server_protocol::CollabAgentState as AppServerCollabAgentState;
 use codex_app_server_protocol::CollabAgentStatus as AppServerCollabAgentStatus;
@@ -52,6 +53,8 @@ use codex_app_server_protocol::ItemStartedNotification;
 use codex_app_server_protocol::MarketplaceInterface;
 use codex_app_server_protocol::PatchApplyStatus as AppServerPatchApplyStatus;
 use codex_app_server_protocol::PatchChangeKind;
+use codex_app_server_protocol::PermissionProfilePersistence as AppServerPermissionProfilePersistence;
+use codex_app_server_protocol::PermissionsRequestApprovalParams;
 use codex_app_server_protocol::PluginAuthPolicy;
 use codex_app_server_protocol::PluginDetail;
 use codex_app_server_protocol::PluginInstallPolicy;
@@ -106,6 +109,7 @@ use codex_protocol::items::AgentMessageItem;
 use codex_protocol::items::PlanItem;
 use codex_protocol::items::TurnItem;
 use codex_protocol::items::UserMessageItem;
+use codex_protocol::models::FileSystemPermissions;
 use codex_protocol::models::MessagePhase;
 use codex_protocol::openai_models::ModelPreset;
 use codex_protocol::openai_models::ReasoningEffortPreset;
@@ -170,6 +174,8 @@ use codex_protocol::protocol::UndoCompletedEvent;
 use codex_protocol::protocol::UndoStartedEvent;
 use codex_protocol::protocol::ViewImageToolCallEvent;
 use codex_protocol::protocol::WarningEvent;
+use codex_protocol::request_permissions::PermissionProfilePersistence;
+use codex_protocol::request_permissions::RequestPermissionProfile;
 use codex_protocol::request_user_input::RequestUserInputEvent;
 use codex_protocol::request_user_input::RequestUserInputQuestion;
 use codex_protocol::request_user_input::RequestUserInputQuestionOption;
@@ -3617,6 +3623,48 @@ fn app_server_exec_approval_request_splits_shell_wrapped_command() {
             "-lc".to_string(),
             script.to_string(),
         ]
+    );
+}
+
+#[test]
+fn app_server_permissions_request_preserves_filesystem_permissions() {
+    let write_path =
+        AbsolutePathBuf::try_from(PathBuf::from("/tmp/out.txt")).expect("path should be absolute");
+
+    let request = request_permissions_from_params(PermissionsRequestApprovalParams {
+        thread_id: "thread-1".to_string(),
+        turn_id: "turn-1".to_string(),
+        item_id: "item-1".to_string(),
+        reason: Some("need workspace access".to_string()),
+        permissions: codex_app_server_protocol::RequestPermissionProfile {
+            network: None,
+            file_system: Some(AdditionalFileSystemPermissions {
+                read: None,
+                write: Some(vec![write_path.clone()]),
+            }),
+        },
+        permissions_profile_persistence: Some(AppServerPermissionProfilePersistence {
+            profile_name: "workspace".to_string(),
+        }),
+    });
+
+    assert_eq!(
+        request,
+        RequestPermissionsEvent {
+            turn_id: "turn-1".to_string(),
+            call_id: "item-1".to_string(),
+            reason: Some("need workspace access".to_string()),
+            permissions: RequestPermissionProfile {
+                network: None,
+                file_system: Some(FileSystemPermissions {
+                    read: None,
+                    write: Some(vec![write_path]),
+                }),
+            },
+            permissions_profile_persistence: Some(PermissionProfilePersistence {
+                profile_name: "workspace".to_string(),
+            }),
+        }
     );
 }
 

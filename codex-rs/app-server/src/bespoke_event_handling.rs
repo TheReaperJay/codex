@@ -113,6 +113,7 @@ use codex_protocol::ThreadId;
 use codex_protocol::dynamic_tools::DynamicToolCallOutputContentItem as CoreDynamicToolCallOutputContentItem;
 use codex_protocol::dynamic_tools::DynamicToolResponse as CoreDynamicToolResponse;
 use codex_protocol::items::parse_hook_prompt_message;
+use codex_protocol::models::PermissionProfile as CorePermissionProfile;
 use codex_protocol::plan_tool::UpdatePlanArgs;
 use codex_protocol::protocol::ApplyPatchApprovalRequestEvent;
 use codex_protocol::protocol::CodexErrorInfo as CoreCodexErrorInfo;
@@ -124,6 +125,7 @@ use codex_protocol::protocol::GuardianAssessmentEvent;
 use codex_protocol::protocol::McpToolCallBeginEvent;
 use codex_protocol::protocol::McpToolCallEndEvent;
 use codex_protocol::protocol::Op;
+use codex_protocol::protocol::PersistPermissionProfileAction as CorePersistPermissionProfileAction;
 use codex_protocol::protocol::RealtimeEvent;
 use codex_protocol::protocol::ReviewDecision;
 use codex_protocol::protocol::ReviewOutputEvent;
@@ -854,6 +856,10 @@ pub(crate) async fn apply_bespoke_event_handling(
                     item_id: request.call_id.clone(),
                     reason: request.reason,
                     permissions: request.permissions.into(),
+                    permissions_profile_persistence: request
+                        .permissions_profile_persistence
+                        .clone()
+                        .map(Into::into),
                 };
                 let (pending_request_id, rx) = outgoing
                     .send_request(ServerRequestPayload::PermissionsRequestApproval(params))
@@ -2495,15 +2501,30 @@ fn request_permissions_response_from_client_result(
             PermissionsRequestApprovalResponse {
                 permissions: V2GrantedPermissionProfile::default(),
                 scope: codex_app_server_protocol::PermissionGrantScope::Turn,
+                persist_to_profile: false,
             }
         });
+    let granted_permissions: CorePermissionProfile =
+        intersect_permission_profiles(requested_permissions.into(), response.permissions.into());
     Some(CoreRequestPermissionsResponse {
-        permissions: intersect_permission_profiles(
-            requested_permissions.into(),
-            response.permissions.into(),
-        )
-        .into(),
-        scope: response.scope.to_core(),
+        permissions: granted_permissions.clone().into(),
+        scope: match response.scope {
+            codex_app_server_protocol::PermissionGrantScope::Turn => CorePermissionGrantScope::Turn,
+            codex_app_server_protocol::PermissionGrantScope::Session => {
+                CorePermissionGrantScope::Session
+            }
+            codex_app_server_protocol::PermissionGrantScope::Persist {
+                permission_profile_amendment,
+            } => CorePermissionGrantScope::Persist {
+                permission_profile_amendment: CorePersistPermissionProfileAction {
+                    profile_name: permission_profile_amendment.profile_name,
+                    permissions: intersect_permission_profiles(
+                        granted_permissions,
+                        permission_profile_amendment.permissions.into(),
+                    ),
+                },
+            },
+        },
     })
 }
 
@@ -3164,7 +3185,9 @@ mod tests {
         let response = request_permissions_response_from_client_result(
             CoreRequestPermissionProfile::default(),
             Ok(Ok(serde_json::json!({
-                "scope": "session",
+                "scope": {
+                    "type": "session",
+                },
                 "permissions": {},
             }))),
         )
@@ -3175,6 +3198,65 @@ mod tests {
             CoreRequestPermissionsResponse {
                 permissions: CoreRequestPermissionProfile::default(),
                 scope: CorePermissionGrantScope::Session,
+            }
+        );
+    }
+
+    #[test]
+    fn request_permissions_response_preserves_permission_profile_amendment_scope() {
+        let requested_path = AbsolutePathBuf::try_from(PathBuf::from("/tmp/requested.txt"))
+            .expect("path should be absolute");
+        let response = request_permissions_response_from_client_result(
+            CoreRequestPermissionProfile {
+                file_system: Some(CoreFileSystemPermissions {
+                    read: None,
+                    write: Some(vec![requested_path.clone()]),
+                }),
+                ..Default::default()
+            },
+            Ok(Ok(serde_json::json!({
+                "scope": {
+                    "type": "persist",
+                    "permissionProfileAmendment": {
+                        "profileName": "workspace",
+                        "permissions": {
+                            "fileSystem": {
+                                "write": ["/tmp/requested.txt", "/tmp/extra.txt"],
+                            },
+                        },
+                    },
+                },
+                "permissions": {
+                    "fileSystem": {
+                        "write": ["/tmp/requested.txt", "/tmp/extra.txt"],
+                    },
+                },
+            }))),
+        )
+        .expect("response should be accepted");
+
+        assert_eq!(
+            response,
+            CoreRequestPermissionsResponse {
+                permissions: CoreRequestPermissionProfile {
+                    file_system: Some(CoreFileSystemPermissions {
+                        read: None,
+                        write: Some(vec![requested_path.clone()]),
+                    }),
+                    ..Default::default()
+                },
+                scope: CorePermissionGrantScope::Persist {
+                    permission_profile_amendment: CorePersistPermissionProfileAction {
+                        profile_name: "workspace".to_string(),
+                        permissions: CorePermissionProfile {
+                            file_system: Some(CoreFileSystemPermissions {
+                                read: None,
+                                write: Some(vec![requested_path]),
+                            }),
+                            ..Default::default()
+                        },
+                    },
+                },
             }
         );
     }
