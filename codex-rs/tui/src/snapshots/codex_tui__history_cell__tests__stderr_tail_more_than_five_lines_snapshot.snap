@@ -1,5 +1,6 @@
 ---
 source: tui/src/history_cell.rs
+assertion_line: 4221
 expression: rendered
 ---
 • Ran seq 1 10 1>&2 && false
@@ -8,3 +9,4 @@ expression: rendered
     … +6 lines
     9
     10
+    [ctrl + o to expand output]
