@@ -13,6 +13,7 @@ use crate::config::types::MemoriesToml;
 use crate::config::types::ModelAvailabilityNuxConfig;
 use crate::config::types::NotificationMethod;
 use crate::config::types::Notifications;
+use crate::config::types::ToolOutputDisplay;
 use crate::config::types::ToolSuggestDiscoverableType;
 use crate::config_loader::RequirementSource;
 use assert_matches::assert_matches;
@@ -264,6 +265,7 @@ fn config_toml_deserializes_model_availability_nux() {
             status_line: None,
             terminal_title: None,
             theme: None,
+            tool_output_display: ToolOutputDisplay::Collapsed,
             model_availability_nux: ModelAvailabilityNuxConfig {
                 shown_count: HashMap::from([
                     ("gpt-bar".to_string(), 4),
@@ -961,6 +963,7 @@ fn tui_config_missing_notifications_field_defaults_to_enabled() {
             status_line: None,
             terminal_title: None,
             theme: None,
+            tool_output_display: ToolOutputDisplay::Collapsed,
             model_availability_nux: ModelAvailabilityNuxConfig::default(),
         }
     );
@@ -4470,6 +4473,7 @@ fn test_precedence_fixture_with_o3_profile() -> std::io::Result<()> {
             tui_notification_method: Default::default(),
             animations: true,
             show_tooltips: true,
+            tool_output_display: ToolOutputDisplay::Collapsed,
             model_availability_nux: ModelAvailabilityNuxConfig::default(),
             analytics_enabled: Some(true),
             feedback_enabled: true,
@@ -4612,6 +4616,7 @@ fn test_precedence_fixture_with_gpt3_profile() -> std::io::Result<()> {
         tui_notification_method: Default::default(),
         animations: true,
         show_tooltips: true,
+        tool_output_display: ToolOutputDisplay::Collapsed,
         model_availability_nux: ModelAvailabilityNuxConfig::default(),
         analytics_enabled: Some(true),
         feedback_enabled: true,
@@ -4752,6 +4757,7 @@ fn test_precedence_fixture_with_zdr_profile() -> std::io::Result<()> {
         tui_notification_method: Default::default(),
         animations: true,
         show_tooltips: true,
+        tool_output_display: ToolOutputDisplay::Collapsed,
         model_availability_nux: ModelAvailabilityNuxConfig::default(),
         analytics_enabled: Some(false),
         feedback_enabled: true,
@@ -4878,6 +4884,7 @@ fn test_precedence_fixture_with_gpt5_profile() -> std::io::Result<()> {
         tui_notification_method: Default::default(),
         animations: true,
         show_tooltips: true,
+        tool_output_display: ToolOutputDisplay::Collapsed,
         model_availability_nux: ModelAvailabilityNuxConfig::default(),
         analytics_enabled: Some(true),
         feedback_enabled: true,

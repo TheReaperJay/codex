@@ -21,6 +21,7 @@ use crate::config::types::SandboxWorkspaceWrite;
 use crate::config::types::ShellEnvironmentPolicy;
 use crate::config::types::ShellEnvironmentPolicyToml;
 use crate::config::types::SkillsConfig;
+use crate::config::types::ToolOutputDisplay;
 use crate::config::types::ToolSuggestConfig;
 use crate::config::types::ToolSuggestDiscoverable;
 use crate::config::types::Tui;
@@ -324,6 +325,9 @@ pub struct Config {
 
     /// Show startup tooltips in the TUI welcome screen.
     pub show_tooltips: bool,
+
+    /// Controls whether tool output in the TUI is collapsed (`collapsed`) or shown in full (`full`).
+    pub tool_output_display: ToolOutputDisplay,
 
     /// Persisted startup availability NUX state for model tooltips.
     pub model_availability_nux: ModelAvailabilityNuxConfig,
@@ -2691,6 +2695,11 @@ impl Config {
                 .unwrap_or_default(),
             animations: cfg.tui.as_ref().map(|t| t.animations).unwrap_or(true),
             show_tooltips: cfg.tui.as_ref().map(|t| t.show_tooltips).unwrap_or(true),
+            tool_output_display: cfg
+                .tui
+                .as_ref()
+                .map(|t| t.tool_output_display)
+                .unwrap_or_default(),
             model_availability_nux: cfg
                 .tui
                 .as_ref()

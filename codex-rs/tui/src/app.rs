@@ -22,6 +22,7 @@ use crate::chatwidget::ReplayKind;
 use crate::chatwidget::ThreadInputState;
 use crate::cwd_prompt::CwdPromptAction;
 use crate::diff_render::DiffSummary;
+use crate::exec_cell::ExecCell;
 use crate::exec_command::split_command_string;
 use crate::exec_command::strip_bash_lc_and_escape;
 use crate::external_editor;
@@ -83,6 +84,7 @@ use codex_core::config::edit::ConfigEdit;
 use codex_core::config::edit::ConfigEditsBuilder;
 use codex_core::config::types::ApprovalsReviewer;
 use codex_core::config::types::ModelAvailabilityNuxConfig;
+use codex_core::config::types::ToolOutputDisplay;
 use codex_core::config_loader::ConfigLayerStackOrdering;
 use codex_core::message_history;
 use codex_core::models_manager::collaboration_mode_presets::CollaborationModesConfig;
@@ -5599,6 +5601,46 @@ impl App {
         tui.frame_requester().schedule_frame();
     }
 
+    fn apply_tool_output_display_to_committed_exec_cells(
+        &mut self,
+        tool_output_display: ToolOutputDisplay,
+    ) -> bool {
+        let mut updated_any = false;
+        for cell in &mut self.transcript_cells {
+            let Some(cell) = Arc::get_mut(cell) else {
+                continue;
+            };
+            let Some(exec_cell) = cell.as_any_mut().downcast_mut::<ExecCell>() else {
+                continue;
+            };
+            exec_cell.set_tool_output_display(tool_output_display);
+            updated_any = true;
+        }
+        updated_any
+    }
+
+    fn toggle_tool_output_display(&mut self, tui: &mut tui::Tui) {
+        let tool_output_display = self.chat_widget.toggle_tool_output_display();
+        let committed_updated =
+            self.apply_tool_output_display_to_committed_exec_cells(tool_output_display);
+
+        if committed_updated {
+            if let Err(err) = self.clear_terminal_ui(tui, /*redraw_header*/ false) {
+                tracing::warn!(error = %err, "failed to refresh terminal UI after output toggle");
+                self.chat_widget
+                    .add_error_message(format!("Failed to refresh terminal UI: {err}"));
+                return;
+            }
+            self.queue_clear_ui_header(tui);
+            self.render_transcript_once(tui);
+        }
+
+        if let Some(Overlay::Transcript(overlay)) = &mut self.overlay {
+            overlay.replace_cells(self.transcript_cells.clone());
+        }
+        tui.frame_requester().schedule_frame();
+    }
+
     async fn handle_key_event(
         &mut self,
         tui: &mut tui::Tui,
@@ -5644,6 +5686,14 @@ impl App {
         }
 
         match key_event {
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers: crossterm::event::KeyModifiers::CONTROL,
+                kind: KeyEventKind::Press,
+                ..
+            } if c.eq_ignore_ascii_case(&'o') => {
+                self.toggle_tool_output_display(tui);
+            }
             KeyEvent {
                 code: KeyCode::Char('t'),
                 modifiers: crossterm::event::KeyModifiers::CONTROL,

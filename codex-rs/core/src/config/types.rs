@@ -721,6 +721,14 @@ impl fmt::Display for NotificationMethod {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ToolOutputDisplay {
+    #[default]
+    Collapsed,
+    Full,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct ModelAvailabilityNuxConfig {
@@ -785,6 +793,10 @@ pub struct Tui {
     /// Use `/theme` in the TUI or see `$CODEX_HOME/themes` for custom themes.
     #[serde(default)]
     pub theme: Option<String>,
+
+    /// Controls whether tool output in the TUI is collapsed (`collapsed`) or shown in full (`full`).
+    #[serde(default)]
+    pub tool_output_display: ToolOutputDisplay,
 
     /// Startup tooltip availability NUX state persisted by the TUI.
     #[serde(default)]

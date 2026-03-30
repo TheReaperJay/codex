@@ -8,6 +8,7 @@
 use std::time::Duration;
 use std::time::Instant;
 
+use codex_core::config::types::ToolOutputDisplay;
 use codex_protocol::parse_command::ParsedCommand;
 use codex_protocol::protocol::ExecCommandSource;
 
@@ -36,6 +37,7 @@ pub(crate) struct ExecCall {
 pub(crate) struct ExecCell {
     pub(crate) calls: Vec<ExecCall>,
     animations_enabled: bool,
+    tool_output_display: ToolOutputDisplay,
 }
 
 impl ExecCell {
@@ -43,7 +45,16 @@ impl ExecCell {
         Self {
             calls: vec![call],
             animations_enabled,
+            tool_output_display: ToolOutputDisplay::Collapsed,
         }
+    }
+
+    pub(crate) fn tool_output_display(&self) -> ToolOutputDisplay {
+        self.tool_output_display
+    }
+
+    pub(crate) fn set_tool_output_display(&mut self, tool_output_display: ToolOutputDisplay) {
+        self.tool_output_display = tool_output_display;
     }
 
     pub(crate) fn with_added_call(
@@ -68,6 +79,7 @@ impl ExecCell {
             Some(Self {
                 calls: [self.calls.clone(), vec![call]].concat(),
                 animations_enabled: self.animations_enabled,
+                tool_output_display: self.tool_output_display,
             })
         } else {
             None

@@ -1014,6 +1014,7 @@ mod tests {
             ExecCommandSource::Agent,
             /*interaction_input*/ None,
             /*animations_enabled*/ true,
+            codex_core::config::types::ToolOutputDisplay::Collapsed,
         );
         exec_cell.complete_call(
             "exec-1",
