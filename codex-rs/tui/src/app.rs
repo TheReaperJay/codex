@@ -5619,7 +5619,7 @@ impl App {
         updated_any
     }
 
-    fn toggle_tool_output_display(&mut self, tui: &mut tui::Tui) {
+    pub(crate) fn toggle_tool_output_display(&mut self, tui: &mut tui::Tui) {
         let tool_output_display = self.chat_widget.toggle_tool_output_display();
         let committed_updated =
             self.apply_tool_output_display_to_committed_exec_cells(tool_output_display);

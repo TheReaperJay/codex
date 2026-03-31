@@ -41,6 +41,7 @@ use color_eyre::eyre::Result;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
+use crossterm::event::KeyModifiers;
 
 /// Aggregates all backtrack-related state used by the App.
 #[derive(Default)]
@@ -107,6 +108,19 @@ impl App {
         tui: &mut tui::Tui,
         event: TuiEvent,
     ) -> Result<bool> {
+        if let TuiEvent::Key(KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::CONTROL,
+            kind: KeyEventKind::Press,
+            ..
+        }) = event
+        {
+            if c.eq_ignore_ascii_case(&'o') {
+                self.toggle_tool_output_display(tui);
+                return Ok(true);
+            }
+        }
+
         if self.backtrack.overlay_preview_active {
             match event {
                 TuiEvent::Key(KeyEvent {

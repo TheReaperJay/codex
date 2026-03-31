@@ -97,6 +97,7 @@ const KEY_CTRL_F: KeyBinding = key_hint::ctrl(KeyCode::Char('f'));
 const KEY_CTRL_D: KeyBinding = key_hint::ctrl(KeyCode::Char('d'));
 const KEY_CTRL_B: KeyBinding = key_hint::ctrl(KeyCode::Char('b'));
 const KEY_CTRL_U: KeyBinding = key_hint::ctrl(KeyCode::Char('u'));
+const KEY_CTRL_O: KeyBinding = key_hint::ctrl(KeyCode::Char('o'));
 const KEY_Q: KeyBinding = key_hint::plain(KeyCode::Char('q'));
 const KEY_ESC: KeyBinding = key_hint::plain(KeyCode::Esc);
 const KEY_ENTER: KeyBinding = key_hint::plain(KeyCode::Enter);
@@ -670,7 +671,10 @@ impl TranscriptOverlay {
         let line2 = Rect::new(area.x, area.y.saturating_add(1), area.width, 1);
         render_key_hints(line1, buf, PAGER_KEY_HINTS);
 
-        let mut pairs: Vec<(&[KeyBinding], &str)> = vec![(&[KEY_Q], "to quit")];
+        let mut pairs: Vec<(&[KeyBinding], &str)> = vec![
+            (&[KEY_Q], "to quit"),
+            (&[KEY_CTRL_O], "to toggle output"),
+        ];
         if self.highlight_cell.is_some() {
             pairs.push((&[KEY_ESC, KEY_LEFT], "to edit prev"));
             pairs.push((&[KEY_RIGHT], "to edit next"));
