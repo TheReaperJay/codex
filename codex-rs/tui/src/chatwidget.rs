@@ -9324,10 +9324,6 @@ impl ChatWidget {
     #[cfg(not(target_os = "windows"))]
     pub(crate) fn clear_windows_sandbox_setup_status(&mut self) {}
 
-    pub(crate) fn tool_output_display(&self) -> ToolOutputDisplay {
-        self.config.tool_output_display
-    }
-
     pub(crate) fn set_tool_output_display(&mut self, display: ToolOutputDisplay) {
         self.config.tool_output_display = display;
         if let Some(exec) = self
